@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {serverDb} from '@/lib/supabase';import {providers} from '@/lib/providers';
+export async function GET(){const db=await serverDb();const {data:{user}}=await db.auth.getUser();if(!user)return NextResponse.json({error:'Unauthorized'},{status:401});return NextResponse.json({providers:providers().map(p=>({...p,enabled:p.id==='ollama'?true:p.enabled}))})}
