@@ -1,0 +1,2 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+:root{color-scheme:dark}body{background:#080d19;color:#e9efff;font-family:Arial,Helvetica,sans-serif}button,input,textarea{outline:none}button:disabled{opacity:.5;cursor:not-allowed}.panel{background:#111b30;border:1px solid #293550;border-radius:16px}.btn{background:#5667f5;border-radius:10px;padding:10px 16px;font-weight:600}.field{background:#0c1426;border:1px solid #34415d;border-radius:10px;padding:10px;color:white;width:100%}pre{white-space:pre-wrap;overflow-wrap:anywhere}
