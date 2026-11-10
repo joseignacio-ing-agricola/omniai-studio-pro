@@ -1,0 +1,1 @@
+import {redirect} from 'next/navigation';import {serverDb} from '@/lib/supabase';import Workspace from '@/components/Workspace';export default async function Home(){const db=await serverDb();const {data:{user}}=await db.auth.getUser();if(!user)redirect('/login');return <Workspace userId={user.id}/>}
