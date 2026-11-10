@@ -1,0 +1,12 @@
+import {NextRequest,NextResponse} from 'next/server';import {serverDb} from '@/lib/supabase';import {providers,generate,recoverable,Msg,ProviderId} from '@/lib/providers';
+export const maxDuration=120;
+export async function POST(req:NextRequest){const db=await serverDb();const {data:{user}}=await db.auth.getUser();if(!user)return NextResponse.json({error:'Unauthorized'},{status:401});
+let body:any;try{body=await req.json()}catch{return NextResponse.json({error:'Invalid JSON'},{status:400})}
+const {projectId,message,preferred}=body||{};if(typeof projectId!=='string'||typeof message!=='string'||!message.trim()||message.length>12000)return NextResponse.json({error:'Invalid request'},{status:400});
+const {data:project}=await db.from('projects').select('id,title').eq('id',projectId).eq('user_id',user.id).single();if(!project)return NextResponse.json({error:'Project not found'},{status:404});
+const {data:history,error:historyError}=await db.from('messages').select('role,content').eq('project_id',projectId).order('created_at',{ascending:false}).limit(30);if(historyError)return NextResponse.json({error:'Could not read history'},{status:500});
+const msgs:Msg[]=[{role:'system',content:'You are OmniAI Studio PRO, a helpful development assistant. Continue the same project faithfully. Do not claim actions you have not performed.'},...(history||[]).reverse().map(m=>({role:m.role as 'user'|'assistant',content:m.content})),{role:'user',content:message.trim()}];
+const {error:saveError}=await db.from('messages').insert({project_id:projectId,user_id:user.id,role:'user',content:message.trim()});if(saveError)return NextResponse.json({error:'Could not save message'},{status:500});
+const choices=providers().filter(p=>p.enabled);if(preferred&&choices.some(p=>p.id===preferred)){choices.sort((a,b)=>Number(b.id===preferred)-Number(a.id===preferred))}
+const attempts:string[]=[];for(const p of choices){try{const answer=await generate(p,msgs);if(!answer.trim())throw new Error('Empty response');const {error}=await db.from('messages').insert({project_id:projectId,user_id:user.id,role:'assistant',content:answer,provider:p.id});if(error)return NextResponse.json({error:'Answer generated but not saved; retry only after checking history'},{status:500});return NextResponse.json({answer,provider:p.id,attempts})}catch(e){attempts.push(`${p.id}: ${e instanceof Error?e.message:'error'}`);if(!recoverable(e))break}}
+return NextResponse.json({error:'No provider could complete the request. Your message was saved.',attempts},{status:503})}
